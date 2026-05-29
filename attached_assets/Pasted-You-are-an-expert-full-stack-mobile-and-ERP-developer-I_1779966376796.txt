@@ -1,0 +1,261 @@
+You are an expert full-stack mobile and ERP developer.
+
+I already have an Electronics ERP web application and I want to transform and extend it into a production-ready Android mobile application with a clean, modern, simple, and non-technical-user-friendly UI/UX.
+
+The app is for an electronics retail business that sells products such as:
+- Mobiles
+- TVs
+- Refrigerators
+- Washing Machines
+- Speakers
+- ACs
+- Laptops
+- Other electronics
+
+====================================
+CORE REQUIREMENTS
+====================================
+
+Build a complete Electronics Retail ERP Mobile App with the following modules and features.
+
+====================================
+1. MOBILE APP REQUIREMENTS
+====================================
+
+- Android-compatible application
+- Responsive mobile-first design
+- Fast and lightweight UI
+- Easy navigation for shop workers and non-technical users
+- Professional modern UI/UX
+- Smooth animations and transitions
+- Optimized performance
+- Offline-friendly if possible
+- APK generation support
+
+Preferred Stack:
+- Frontend: React Native or Flutter
+- Backend: FastAPI or Django
+- Database: PostgreSQL or SQLite for local mode
+- Authentication: JWT/Auth system
+
+====================================
+2. PRODUCT HIERARCHY SYSTEM
+====================================
+
+Create a proper product hierarchy:
+
+Category
+   → Brand
+       → Product Model
+            → Variant
+
+Example:
+
+Mobiles
+   → Samsung
+       → Galaxy S24
+            → 128GB Black
+            → 256GB Blue
+
+TVs
+   → Sony
+       → Bravia XR
+
+Each category should display:
+- Category image/banner
+
+Each brand should display:
+- Brand logo/image
+
+Each product model should display:
+- Product image
+- Product details
+- Variant details
+
+====================================
+3. PRODUCT MANAGEMENT
+====================================
+
+Each product/variant should support:
+
+- Product name
+- Category
+- Brand
+- Model
+- Variant
+- SKU
+- Barcode
+- Serial Number
+- IMEI Number (for mobiles)
+- Purchase price
+- Fixed selling price
+- Discount capability during billing
+- GST/Tax
+- Stock quantity
+- Warranty period
+- Supplier/Vendor
+- Product images
+- Description/specifications
+
+====================================
+4. INVENTORY MANAGEMENT
+====================================
+
+Implement inventory system with:
+
+- Stock tracking
+- Low stock alerts
+- Product availability
+- Serial/IMEI tracking
+- Purchase entries
+- Stock updates
+- Warehouse/store stock support
+- Inventory history logs
+
+====================================
+5. BILLING / POS SYSTEM
+====================================
+
+Create a complete billing system:
+
+- Fast billing UI
+- Barcode scanning support
+- Add products to cart
+- Fixed product pricing
+- Seller can apply custom discounts during checkout
+- GST calculation
+- Multiple payment methods
+- Invoice generation
+- Thermal printer support (optional)
+- Return/refund support
+
+Invoice should include:
+- Shop details
+- Customer details
+- Product list
+- Taxes
+- Discounts
+- Final amount
+- Payment method
+- QR/barcode if possible
+
+====================================
+6. CUSTOMER MANAGEMENT
+====================================
+
+Store customer information:
+
+- Customer name
+- Phone number
+- Purchase history
+- Warranty tracking
+- Invoice history
+- Customer due amounts
+- Loyalty/customer notes
+
+====================================
+7. REPORTS & ANALYTICS
+====================================
+
+Generate detailed business reports:
+
+- Daily sales
+- Monthly sales
+- Profit reports
+- Inventory reports
+- Best-selling products
+- Low stock products
+- Purchase reports
+- GST/tax reports
+- Customer sales reports
+
+====================================
+8. EXPORT FEATURES
+====================================
+
+Generate and export:
+
+- Invoices as PDF
+- Reports as PDF
+- Reports as Excel (.xlsx)
+- Sales summaries
+- Inventory summaries
+
+Use proper formatting and professional layouts.
+
+====================================
+9. USER ROLES & AUTHENTICATION
+====================================
+
+Implement role-based access:
+
+- Admin
+- Manager
+- Salesperson
+- Accountant
+
+Each role should have controlled permissions.
+
+====================================
+10. DASHBOARD
+====================================
+
+Create a modern dashboard showing:
+
+- Total sales
+- Profit
+- Orders
+- Low stock alerts
+- Top-selling products
+- Revenue graphs
+- Inventory summary
+
+====================================
+11. PERFORMANCE & CODE QUALITY
+====================================
+
+Requirements:
+
+- Clean scalable architecture
+- Modular codebase
+- Production-ready structure
+- Optimized API calls
+- Error handling
+- Secure authentication
+- Proper database normalization
+- Maintainable folder structure
+
+====================================
+12. DELIVERABLES
+====================================
+
+Provide:
+
+- Complete source code
+- Android APK build support
+- Database schema
+- API documentation
+- Setup instructions
+- Deployment instructions
+- Sample test data
+- Proper comments/documentation
+
+====================================
+13. IMPORTANT UX REQUIREMENTS
+====================================
+
+The application must be:
+- Extremely simple to use
+- Suitable for real electronics shop owners
+- Fast for billing operations
+- Visually professional
+- Easy for non-technical staff
+
+Focus heavily on:
+- Inventory consistency
+- Billing accuracy
+- Smooth user flow
+- Real-world usability
+
+Avoid unnecessary complexity.
+Prioritize reliability and practical business usage.
