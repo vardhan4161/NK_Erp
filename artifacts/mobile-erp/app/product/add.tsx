@@ -17,6 +17,7 @@ const getCatIcon = (name: string) => {
     if (n.includes('audio') || n.includes('headphone')) return 'headphones';
     if (n.includes('tv') || n.includes('television')) return 'tv';
     if (n.includes('watch')) return 'watch';
+    if (n.includes('ac') || n.includes('conditioner') || n.includes('air')) return 'wind';
     if (n.includes('camera')) return 'camera';
     return 'box';
   };
