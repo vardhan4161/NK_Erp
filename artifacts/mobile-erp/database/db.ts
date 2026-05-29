@@ -240,12 +240,15 @@ function createWebDatabase(): DatabaseInstance {
             }
           } else {
             // Clean up comp to extract column, operator, and values
-            const opMatch = comp.match(/(=|LIKE|!=|>=|<=)/i);
+            // IMPORTANT: Order matters — match != before =, >= before =, <= before =
+            const opMatch = comp.match(/(!=|>=|<=|LIKE|=)/i);
             if (opMatch) {
               const op = opMatch[1].toUpperCase();
-              const parts = comp.split(op);
+              // Split on the operator using a regex so multi-char ops work correctly
+              const splitRegex = new RegExp(op.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+              const parts = comp.split(splitRegex);
               let colExpr = parts[0].trim();
-              let valExpr = parts[1].trim();
+              let valExpr = parts.slice(1).join(op).trim(); // rejoin in case value has '='
 
               // Check if this is a date() expression wrapping a column
               const isDateExpr = colExpr.toLowerCase().includes('date(');
