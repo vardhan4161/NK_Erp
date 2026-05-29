@@ -9,6 +9,18 @@ import { useDatabaseStatus } from '@/contexts/DatabaseContext';
 import { ProductImage } from '@/components/ProductImage';
 import type { Category, Brand } from '@/database/repositories';
 
+const getCatIcon = (name: string) => {
+    if (!name) return 'box';
+    const n = name.toLowerCase();
+    if (n.includes('mobile') || n.includes('phone')) return 'smartphone';
+    if (n.includes('laptop') || n.includes('computer')) return 'monitor';
+    if (n.includes('audio') || n.includes('headphone')) return 'headphones';
+    if (n.includes('tv') || n.includes('television')) return 'tv';
+    if (n.includes('watch')) return 'watch';
+    if (n.includes('camera')) return 'camera';
+    return 'box';
+  };
+
 export default function AddProductScreen() {
   const { colors } = useTheme();
   const { repos } = useDatabaseStatus();
@@ -265,7 +277,9 @@ export default function AddProductScreen() {
                       setStep(2);
                     }}
                   >
-                    <Image source={{ uri: cat.image_uri || CATEGORY_IMAGES[cat.name] || CATEGORY_IMAGES['Accessories'] }} style={{ width: '100%', height: 80, marginBottom: 8 }} resizeMode="cover" />
+                    <View style={{ width: '100%', height: 80, marginBottom: 8, backgroundColor: colors.primary + '22', alignItems: 'center', justifyContent: 'center', borderRadius: 12 }}>
+                      <Feather name={getCatIcon(cat.name) as any} size={32} color={colors.primary} />
+                    </View>
                     <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center', paddingHorizontal: 4, color: colors.text }} numberOfLines={1}>{cat.name}</Text>
                   </TouchableOpacity>
                 ))}

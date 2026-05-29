@@ -15,6 +15,18 @@ import { CATEGORY_IMAGES } from '@/database/seedData';
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = width / 2 - 24;
 
+const getCatIcon = (name: string) => {
+    if (!name) return 'box';
+    const n = name.toLowerCase();
+    if (n.includes('mobile') || n.includes('phone')) return 'smartphone';
+    if (n.includes('laptop') || n.includes('computer')) return 'monitor';
+    if (n.includes('audio') || n.includes('headphone')) return 'headphones';
+    if (n.includes('tv') || n.includes('television')) return 'tv';
+    if (n.includes('watch')) return 'watch';
+    if (n.includes('camera')) return 'camera';
+    return 'box';
+  };
+
 export default function InventoryScreen() {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -97,11 +109,9 @@ export default function InventoryScreen() {
                 onPress={() => loadBrandsForCategory(cat)}
                 activeOpacity={0.8}
               >
-                <Image 
-                  source={{ uri: cat.image_uri || CATEGORY_IMAGES[cat.name] || CATEGORY_IMAGES['Accessories'] }} 
-                  style={styles.catImage} 
-                  resizeMode="cover"
-                />
+                <View style={[styles.catImage, { backgroundColor: colors.primary + '22', alignItems: 'center', justifyContent: 'center' }]}>
+                  <Feather name={getCatIcon(cat.name) as any} size={28} color={colors.primary} />
+                </View>
                 <View style={styles.catTextContainer}>
                   <Text style={[styles.catName, { color: colors.text }]} numberOfLines={1}>{cat.name}</Text>
                   <Text style={[styles.catCount, { color: colors.textMuted }]}>{cat.product_count} items</Text>
@@ -154,11 +164,9 @@ export default function InventoryScreen() {
                   activeOpacity={0.8}
                 >
                   <View style={styles.prodImageContainer}>
-                    <Image 
-                      source={{ uri: p.image_uri || CATEGORY_IMAGES[selectedCat.name] || CATEGORY_IMAGES['Accessories'] }} 
-                      style={styles.prodImage} 
-                      resizeMode="cover"
-                    />
+                    <View style={[styles.prodImage, { backgroundColor: colors.border + '66', alignItems: 'center', justifyContent: 'center' }]}>
+                    <Feather name={getCatIcon(selectedCat?.name || '') as any} size={30} color={colors.textSecondary} />
+                  </View>
                     {p.current_stock <= p.reorder_level && (
                       <View style={[styles.badge, { backgroundColor: p.current_stock === 0 ? colors.error : colors.warning }]}>
                         <Text style={styles.badgeText}>{p.current_stock === 0 ? 'Out of Stock' : `Low: ${p.current_stock}`}</Text>

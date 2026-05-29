@@ -31,36 +31,20 @@ export function ProductImage({
   const [imgError, setImgError] = useState(false);
   const [fallbackError, setFallbackError] = useState(false);
 
-  // Try product-specific image
-  const hasProductImage = imageUri && !imgError;
-  // Fallback to category image
-  const categoryImage = categoryName ? CATEGORY_IMAGES[categoryName] : null;
-  const hasCategoryImage = categoryImage && !fallbackError && !hasProductImage;
-
-  if (hasProductImage) {
-    return (
-      <Image
-        source={{ uri: imageUri }}
-        style={[styles.img, { width: size, height: size, borderRadius }]}
-        resizeMode="cover"
-        onError={() => setImgError(true)}
-      />
-    );
+  const getIconForCategory = (catName?: string) => {
+    if (!catName) return 'package';
+    const n = catName.toLowerCase();
+    if (n.includes('mobile') || n.includes('phone')) return 'smartphone';
+    if (n.includes('laptop') || n.includes('computer')) return 'monitor';
+    if (n.includes('audio') || n.includes('headphone')) return 'headphones';
+    if (n.includes('tv') || n.includes('television')) return 'tv';
+    if (n.includes('watch')) return 'watch';
+    if (n.includes('camera')) return 'camera';
+    if (n.includes('accessory')) return 'paperclip';
+    return 'box';
   }
 
-  if (hasCategoryImage) {
-    return (
-      <Image
-        source={{ uri: categoryImage }}
-        style={[styles.img, { width: size, height: size, borderRadius }]}
-        resizeMode="cover"
-        onError={() => setFallbackError(true)}
-      />
-    );
-  }
-
-  // Final fallback: category icon
-  const iconName = (categoryIcon || 'package') as keyof typeof Feather.glyphMap;
+  const iconName = getIconForCategory(categoryName) as keyof typeof Feather.glyphMap;
   return (
     <View style={[styles.iconBox, { width: size, height: size, borderRadius, backgroundColor }]}>
       <Feather name={iconName} size={size * 0.45} color={iconColor} />
