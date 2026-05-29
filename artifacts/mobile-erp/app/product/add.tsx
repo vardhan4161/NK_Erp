@@ -1,7 +1,9 @@
 import { Feather } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform, KeyboardAvoidingView, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert, Platform, KeyboardAvoidingView, ActivityIndicator, Image, Modal, Dimensions } from 'react-native';
+import { CameraView, useCameraPermissions } from 'expo-camera';
+import { CATEGORY_IMAGES } from '@/database/seedData';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDatabaseStatus } from '@/contexts/DatabaseContext';
 import { ProductImage } from '@/components/ProductImage';
@@ -15,6 +17,7 @@ export default function AddProductScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [name, setName] = useState('');
+  const [step, setStep] = useState(1);
   const [categoryId, setCategoryId] = useState<number>(0);
   const [brandId, setBrandId] = useState<number>(0);
   const [model, setModel] = useState('');
@@ -29,6 +32,52 @@ export default function AddProductScreen() {
   const [description, setDescription] = useState('');
   const [imageUri, setImageUri] = useState('');
   const [isScraping, setIsScraping] = useState(false);
+
+  const [showScanner, setShowScanner] = useState(false);
+  const [permission, requestPermission] = useCameraPermissions();
+
+  const handleBarcodeScanned = async ({ data }: { data: string }) => {
+    setShowScanner(false);
+    setBarcode(data);
+    
+    // Auto-fetch details
+    try {
+      setIsScraping(true);
+      const res = await fetch(`https://api.upcitemdb.com/prod/trial/lookup?upc=${data}`);
+      const json = await res.json();
+      if (json.items && json.items.length > 0) {
+        const item = json.items[0];
+        if (item.title && !name) setName(item.title);
+        if (item.model && !model) setModel(item.model);
+        if (item.description && !description) setDescription(item.description);
+        if (item.images && item.images.length > 0 && !imageUri) setImageUri(item.images[0]);
+        if (item.brand && !brandId) {
+          setNewBrandName(item.brand);
+          setShowNewBrandInput(true);
+        }
+        Alert.alert('Product Found! 📦', `Fetched details for: ${item.title}`);
+      } else {
+        Alert.alert('Scanned', 'Barcode scanned! We could not find auto-details online, but the barcode is filled.');
+      }
+    } catch (e) {
+      console.error(e);
+      Alert.alert('Scanned', 'Barcode scanned successfully.');
+    } finally {
+      setIsScraping(false);
+    }
+  };
+
+  const handleOpenScanner = async () => {
+    if (!permission?.granted) {
+      const { granted } = await requestPermission();
+      if (!granted) {
+        Alert.alert('Permission Denied', 'Camera permission is required to scan barcodes.');
+        return;
+      }
+    }
+    setShowScanner(true);
+  };
+
 
   const [recommendedBrandIds, setRecommendedBrandIds] = useState<Set<number>>(new Set());
   const [showAllBrands, setShowAllBrands] = useState(false);
@@ -190,163 +239,212 @@ export default function AddProductScreen() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView style={[styles.root, { backgroundColor: colors.background }]} contentContainerStyle={{ padding: 16, paddingBottom: 100, gap: 16 }}>
-        {/* Basic Info */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.secTitle, { color: colors.textSecondary }]}>BASIC INFO</Text>
-          <Input label="Product Name *" value={name} onChangeText={setName} colors={colors} placeholder="e.g., Symphony Cooler, iPhone 15" />
-        </View>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingBottom: 12, paddingTop: 40, borderBottomWidth: 1, backgroundColor: colors.card, borderBottomColor: colors.border }}>
+        <TouchableOpacity style={{ padding: 8, marginRight: 8 }} onPress={() => {
+          if (step > 1) setStep(step - 1);
+          else router.back();
+        }}>
+          <Feather name="arrow-left" size={24} color={colors.text} />
+        </TouchableOpacity>
+        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.text }}>Add Product</Text>
+      </View>
 
-        {/* Classification */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.secTitle, { color: colors.textSecondary }]}>CLASSIFICATION</Text>
-          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Category *</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-            <View style={styles.chipRow}>
-              {categories.map(c => (
-                <TouchableOpacity key={c.id} style={[styles.chip, { backgroundColor: categoryId === c.id ? colors.primary : colors.inputBg, borderColor: categoryId === c.id ? colors.primary : colors.border }]} onPress={() => setCategoryId(c.id)}>
-                  <Text style={[styles.chipText, { color: categoryId === c.id ? '#FFF' : colors.textSecondary }]}>{c.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </ScrollView>
-          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Brand</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
-            <View style={styles.chipRow}>
-              <TouchableOpacity style={[styles.chip, { backgroundColor: !brandId && !showNewBrandInput ? colors.primary : colors.inputBg, borderColor: !brandId && !showNewBrandInput ? colors.primary : colors.border }]} onPress={() => { setBrandId(0); setShowNewBrandInput(false); }}>
-                <Text style={[styles.chipText, { color: !brandId && !showNewBrandInput ? '#FFF' : colors.textSecondary }]}>None</Text>
-              </TouchableOpacity>
-              {brands.map(b => {
-                const isRecommended = recommendedBrandIds.has(b.id) || recommendedBrandIds.size === 0;
-                // Only filter if category is selected, showing recommended, selected, or when showAllBrands is active
-                if (categoryId > 0 && !isRecommended && !showAllBrands && brandId !== b.id) return null;
-
-                return (
-                  <TouchableOpacity key={b.id} style={[styles.chip, { backgroundColor: brandId === b.id && !showNewBrandInput ? colors.primary : colors.inputBg, borderColor: brandId === b.id && !showNewBrandInput ? colors.primary : colors.border }]} onPress={() => { setBrandId(b.id); setShowNewBrandInput(false); }}>
-                    <Text style={[styles.chipText, { color: brandId === b.id && !showNewBrandInput ? '#FFF' : colors.textSecondary }]}>
-                      {b.name} {categoryId > 0 && !isRecommended && '⚙️'}
-                    </Text>
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 100, gap: 16 }}>
+          {step === 1 && (
+            <View>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.text, marginBottom: 16 }}>Step 1: Select Category</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                {categories.map(cat => (
+                  <TouchableOpacity 
+                    key={cat.id} 
+                    style={{ width: '30%', borderRadius: 12, borderWidth: 1, overflow: 'hidden', paddingBottom: 8, backgroundColor: colors.card, borderColor: categoryId === cat.id ? colors.primary : colors.border }}
+                    onPress={() => {
+                      setCategoryId(cat.id);
+                      setStep(2);
+                    }}
+                  >
+                    <Image source={{ uri: cat.image_uri || CATEGORY_IMAGES[cat.name] || CATEGORY_IMAGES['Accessories'] }} style={{ width: '100%', height: 80, marginBottom: 8 }} resizeMode="cover" />
+                    <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center', paddingHorizontal: 4, color: colors.text }} numberOfLines={1}>{cat.name}</Text>
                   </TouchableOpacity>
-                );
-              })}
-              <TouchableOpacity style={[styles.chip, { backgroundColor: showNewBrandInput ? colors.primary : colors.inputBg, borderColor: showNewBrandInput ? colors.primary : colors.border, borderStyle: 'dashed' }]} onPress={() => { setShowNewBrandInput(true); setBrandId(0); }}>
-                <Text style={[styles.chipText, { color: showNewBrandInput ? '#FFF' : colors.primary }]}>+ New Brand</Text>
-              </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {step === 2 && (
+            <View>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.text, marginBottom: 16 }}>Step 2: Select Brand</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
+                <TouchableOpacity 
+                  style={{ width: '30%', borderRadius: 12, borderWidth: 1, overflow: 'hidden', paddingBottom: 8, backgroundColor: colors.card, borderColor: brandId === 0 && !showNewBrandInput ? colors.primary : colors.border }}
+                  onPress={() => {
+                    setBrandId(0);
+                    setShowNewBrandInput(false);
+                    setStep(3);
+                  }}
+                >
+                  <View style={{ width: '100%', height: 80, marginBottom: 8, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }}>
+                    <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.textMuted }}>N</Text>
+                  </View>
+                  <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center', paddingHorizontal: 4, color: colors.text }} numberOfLines={1}>None</Text>
+                </TouchableOpacity>
+
+                {brands.map(b => {
+                  const isRecommended = recommendedBrandIds.has(b.id) || recommendedBrandIds.size === 0;
+                  if (categoryId > 0 && !isRecommended && !showAllBrands && brandId !== b.id) return null;
+
+                  return (
+                    <TouchableOpacity 
+                      key={b.id} 
+                      style={{ width: '30%', borderRadius: 12, borderWidth: 1, overflow: 'hidden', paddingBottom: 8, backgroundColor: colors.card, borderColor: brandId === b.id ? colors.primary : colors.border }}
+                      onPress={() => {
+                        setBrandId(b.id);
+                        setShowNewBrandInput(false);
+                        setStep(3);
+                      }}
+                    >
+                      <View style={{ width: '100%', height: 80, marginBottom: 8, backgroundColor: colors.border, justifyContent: 'center', alignItems: 'center' }}>
+                        <Text style={{ fontSize: 24, fontFamily: 'Inter_700Bold', color: colors.textMuted }}>{b.name.charAt(0)}</Text>
+                      </View>
+                      <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center', paddingHorizontal: 4, color: colors.text }} numberOfLines={1}>{b.name}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                <TouchableOpacity 
+                  style={{ width: '30%', borderRadius: 12, borderWidth: 1, overflow: 'hidden', paddingBottom: 8, backgroundColor: colors.card, borderColor: colors.primary, borderStyle: 'dashed' }}
+                  onPress={() => {
+                    setShowNewBrandInput(true);
+                    setBrandId(0);
+                    setStep(3);
+                  }}
+                >
+                  <View style={{ width: '100%', height: 80, marginBottom: 8, backgroundColor: colors.primary + '22', justifyContent: 'center', alignItems: 'center' }}>
+                    <Feather name="plus" size={24} color={colors.primary} />
+                  </View>
+                  <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', textAlign: 'center', paddingHorizontal: 4, color: colors.primary }} numberOfLines={1}>Add New</Text>
+                </TouchableOpacity>
+              </View>
               {categoryId > 0 && !showAllBrands && recommendedBrandIds.size > 0 && (
-                <TouchableOpacity style={[styles.chip, { backgroundColor: colors.inputBg, borderColor: colors.border, borderStyle: 'dashed' }]} onPress={() => setShowAllBrands(true)}>
-                  <Text style={[styles.chipText, { color: colors.primary }]}>Show All Brands</Text>
+                <TouchableOpacity style={{ marginTop: 16, padding: 12, backgroundColor: colors.inputBg, borderRadius: 8, alignItems: 'center' }} onPress={() => setShowAllBrands(true)}>
+                  <Text style={{ color: colors.primary, fontFamily: 'Inter_600SemiBold' }}>Show All Brands</Text>
                 </TouchableOpacity>
               )}
             </View>
-          </ScrollView>
-          {showNewBrandInput && (
-            <Input label="New Brand Name *" value={newBrandName} onChangeText={setNewBrandName} colors={colors} placeholder="e.g., Sony" />
           )}
-        </View>
 
-        {/* Pricing */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.secTitle, { color: colors.textSecondary }]}>PRICING</Text>
-          <Input label="Selling Price (₹) *" value={sellingPrice} onChangeText={setSellingPrice} colors={colors} keyboard="numeric" placeholder="e.g., 14200" />
-        </View>
-
-        {/* Advanced Settings Toggle */}
-        <TouchableOpacity 
-          style={[styles.advancedToggle, { borderColor: colors.border, backgroundColor: colors.inputBg }]}
-          onPress={() => setShowAdvanced(!showAdvanced)}
-          activeOpacity={0.8}
-        >
-          <Feather name={showAdvanced ? "chevron-up" : "chevron-down"} size={18} color={colors.primary} />
-          <Text style={[styles.advancedToggleText, { color: colors.text }]}>
-            {showAdvanced ? "Hide Advanced Settings" : "Show Advanced Settings (Cost, Stock, GST...)"}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Advanced Settings Block */}
-        {showAdvanced && (
-          <View style={{ gap: 16 }}>
-            {/* Product Image */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border, alignItems: 'center' }]}>
-              <Text style={[styles.secTitle, { color: colors.textSecondary, alignSelf: 'flex-start' }]}>PRODUCT IMAGE</Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16, width: '100%', marginTop: 8 }}>
-                <ProductImage
-                  imageUri={imageUri}
-                  categoryName={categories.find(c => c.id === categoryId)?.name}
-                  size={72}
-                  borderRadius={14}
-                />
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={{ fontSize: 13, color: colors.text, fontFamily: 'Inter_600SemiBold' }}>
-                    {imageUri ? 'Custom web image loaded' : 'Default placeholder loaded'}
-                  </Text>
-                  <Text style={{ fontSize: 11, color: colors.textSecondary, fontFamily: 'Inter_400Regular' }}>
-                    Image will be automatically scraped or you can search manually.
-                  </Text>
+          {step === 3 && (
+            <View style={{ gap: 16 }}>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter_600SemiBold', color: colors.text }}>Step 3: Product Details</Text>
+              
+              {showNewBrandInput && (
+                <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <Input label="New Brand Name *" value={newBrandName} onChangeText={setNewBrandName} colors={colors} placeholder="e.g., Sony" />
                 </View>
+              )}
+
+              {/* Basic Info */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.secTitle, { color: colors.textSecondary }]}>BASIC INFO</Text>
+                <Input label="Product Name *" value={name} onChangeText={setName} colors={colors} placeholder="e.g., Symphony Cooler, iPhone 15" />
               </View>
 
-              <TouchableOpacity 
-                style={[styles.scrapeBtn, { borderColor: colors.primary }]} 
-                onPress={handleAutoScrape} 
-                disabled={isScraping}
-                activeOpacity={0.8}
-              >
-                {isScraping ? (
-                  <ActivityIndicator size="small" color={colors.primary} />
-                ) : (
-                  <Feather name="globe" size={16} color={colors.primary} />
-                )}
-                <Text style={[styles.scrapeBtnText, { color: colors.primary }]}>
-                  {isScraping ? 'Searching Web...' : 'Auto-Fetch Image from Web'}
-                </Text>
+              {/* Pricing */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.secTitle, { color: colors.textSecondary }]}>PRICING</Text>
+                <Input label="Selling Price (₹) *" value={sellingPrice} onChangeText={setSellingPrice} colors={colors} keyboard="numeric" placeholder="e.g., 14500" />
+              </View>
+
+              {/* Image Options */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.secTitle, { color: colors.textSecondary }]}>PRODUCT IMAGE</Text>
+                <View style={{ alignItems: 'center', marginVertical: 12 }}>
+                  <ProductImage imageUri={imageUri} size={100} borderRadius={16} />
+                </View>
+                <Input label="Image URL (Optional)" value={imageUri} onChangeText={setImageUri} colors={colors} placeholder="Paste image URL or use auto-fetch" />
+                <TouchableOpacity style={[styles.scrapeBtn, { borderColor: colors.primary }]} onPress={handleAutoScrape} disabled={isScraping}>
+                  {isScraping ? <ActivityIndicator size="small" color={colors.primary} /> : <Feather name="globe" size={16} color={colors.primary} />}
+                  <Text style={[styles.scrapeBtnText, { color: colors.primary }]}>{isScraping ? 'Searching Web...' : 'Auto-Fetch Image from Web'}</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Extra Classification */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.secTitle, { color: colors.textSecondary }]}>EXTRA CLASSIFICATION</Text>
+                <Input label="Model" value={model} onChangeText={setModel} colors={colors} placeholder="e.g., Galaxy S24 Ultra" />
+                <Input label="Variant" value={variant} onChangeText={setVariant} colors={colors} placeholder="e.g., 256GB Black" />
+              </View>
+
+              {/* Description */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.secTitle, { color: colors.textSecondary }]}>ADDITIONAL DESCRIPTION</Text>
+                <Input label="Description" value={description} onChangeText={setDescription} colors={colors} multiline placeholder="Enter notes or specs" />
+              </View>
+
+              {/* Extra Pricing */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.secTitle, { color: colors.textSecondary }]}>TAX & COST DETAILS</Text>
+                <Input label="Cost Price (₹) (Optional)" value={costPrice} onChangeText={setCostPrice} colors={colors} keyboard="numeric" placeholder="e.g., 12033.90 (default: 70% of Selling)" />
+                <Input label="GST Rate (%) (Optional)" value={gstRate} onChangeText={setGstRate} colors={colors} keyboard="numeric" placeholder="e.g., 18 (default: 0)" />
+              </View>
+
+              {/* Identification */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Text style={[styles.secTitle, { color: colors.textSecondary }]}>IDENTIFICATION</Text>
+                  <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.primary + '22', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16 }} onPress={handleOpenScanner}>
+                    <Feather name="maximize" size={14} color={colors.primary} />
+                    <Text style={{ fontSize: 12, fontFamily: 'Inter_600SemiBold', color: colors.primary }}>Scan & Auto-Fill</Text>
+                  </TouchableOpacity>
+                </View>
+                <Input label="Barcode" value={barcode} onChangeText={setBarcode} colors={colors} placeholder="Scan or type barcode" />
+                <Text style={[styles.hint, { color: colors.textMuted }]}>SKU will be auto-generated</Text>
+              </View>
+
+              {/* Stock */}
+              <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Text style={[styles.secTitle, { color: colors.textSecondary }]}>STOCK & WARRANTY</Text>
+                <Input label="Initial Stock" value={stock} onChangeText={setStock} colors={colors} keyboard="numeric" />
+                <Input label="Reorder Level" value={reorderLevel} onChangeText={setReorderLevel} colors={colors} keyboard="numeric" />
+                <Input label="Warranty (months)" value={warranty} onChangeText={setWarranty} colors={colors} keyboard="numeric" />
+              </View>
+
+              {/* Save */}
+              <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSave} activeOpacity={0.8}>
+                <Feather name="check" size={20} color="#FFF" />
+                <Text style={styles.saveBtnText}>Save Product</Text>
               </TouchableOpacity>
             </View>
+          )}
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-            {/* Extra Classification */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.secTitle, { color: colors.textSecondary }]}>EXTRA CLASSIFICATION</Text>
-              <Input label="Model" value={model} onChangeText={setModel} colors={colors} placeholder="e.g., Galaxy S24 Ultra" />
-              <Input label="Variant" value={variant} onChangeText={setVariant} colors={colors} placeholder="e.g., 256GB Black" />
-            </View>
-
-            {/* Description */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.secTitle, { color: colors.textSecondary }]}>ADDITIONAL DESCRIPTION</Text>
-              <Input label="Description" value={description} onChangeText={setDescription} colors={colors} multiline placeholder="Enter notes or specs" />
-            </View>
-
-            {/* Extra Pricing */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.secTitle, { color: colors.textSecondary }]}>TAX & COST DETAILS</Text>
-              <Input label="Cost Price (₹) (Optional)" value={costPrice} onChangeText={setCostPrice} colors={colors} keyboard="numeric" placeholder="e.g., 12033.90 (default: 70% of Selling)" />
-              <Input label="GST Rate (%) (Optional)" value={gstRate} onChangeText={setGstRate} colors={colors} keyboard="numeric" placeholder="e.g., 18 (default: 0)" />
-            </View>
-
-            {/* Identification */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.secTitle, { color: colors.textSecondary }]}>IDENTIFICATION</Text>
-              <Input label="Barcode" value={barcode} onChangeText={setBarcode} colors={colors} placeholder="Scan or type barcode" />
-              <Text style={[styles.hint, { color: colors.textMuted }]}>SKU will be auto-generated</Text>
-            </View>
-
-            {/* Stock */}
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.secTitle, { color: colors.textSecondary }]}>STOCK & WARRANTY</Text>
-              <Input label="Initial Stock" value={stock} onChangeText={setStock} colors={colors} keyboard="numeric" />
-              <Input label="Reorder Level" value={reorderLevel} onChangeText={setReorderLevel} colors={colors} keyboard="numeric" />
-              <Input label="Warranty (months)" value={warranty} onChangeText={setWarranty} colors={colors} keyboard="numeric" />
+      {/* Scanner Modal */}
+      <Modal visible={showScanner} transparent animationType="slide" onRequestClose={() => setShowScanner(false)}>
+        <View style={{ flex: 1, backgroundColor: '#000' }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 50, paddingHorizontal: 20, paddingBottom: 20, zIndex: 10 }}>
+            <Text style={{ color: '#FFF', fontSize: 18, fontFamily: 'Inter_700Bold' }}>Scan Product Barcode</Text>
+            <TouchableOpacity onPress={() => setShowScanner(false)}>
+              <Feather name="x" size={28} color="#FFF" />
+            </TouchableOpacity>
+          </View>
+          <CameraView 
+            style={{ flex: 1 }} 
+            facing="back"
+            barcodeScannerSettings={{ barcodeTypes: ['qr', 'ean13', 'ean8', 'upc_a', 'upc_e', 'code39', 'code128'] }}
+            onBarcodeScanned={showScanner ? handleBarcodeScanned : undefined}
+          />
+          <View style={{ position: 'absolute', bottom: 50, left: 0, right: 0, alignItems: 'center' }}>
+            <View style={{ backgroundColor: 'rgba(0,0,0,0.6)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 }}>
+              <Text style={{ color: '#FFF', fontSize: 14 }}>Point camera at a barcode to scan and auto-fill</Text>
             </View>
           </View>
-        )}
+        </View>
+      </Modal>
 
-        {/* Save */}
-        <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSave} activeOpacity={0.8}>
-          <Feather name="check" size={20} color="#FFF" />
-          <Text style={styles.saveBtnText}>Save Product</Text>
-        </TouchableOpacity>
-      </ScrollView>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

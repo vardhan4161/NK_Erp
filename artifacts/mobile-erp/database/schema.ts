@@ -149,6 +149,7 @@ CREATE TABLE IF NOT EXISTS sale_items (
   product_name TEXT,
   product_sku TEXT,
   quantity INTEGER NOT NULL DEFAULT 1,
+  cost_price REAL NOT NULL DEFAULT 0,
   unit_price REAL NOT NULL DEFAULT 0,
   discount REAL NOT NULL DEFAULT 0,
   gst_rate REAL NOT NULL DEFAULT 0,

@@ -66,16 +66,16 @@ export function createReportRepo(db: SQLiteDB) {
       const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
 
       const [todayStats] = await db.getAllAsync<{ revenue: number; cnt: number }>(
-        `SELECT COALESCE(SUM(grand_total), 0) as revenue, COUNT(*) as cnt FROM sales WHERE date(created_at) = ? AND status != 'RETURNED'`, [today]
+        `SELECT SUM(grand_total) as revenue, COUNT(*) as cnt FROM sales WHERE date(created_at) = ? AND status != 'RETURNED'`, [today]
       );
       const [monthStats] = await db.getAllAsync<{ revenue: number; cnt: number }>(
-        `SELECT COALESCE(SUM(grand_total), 0) as revenue, COUNT(*) as cnt FROM sales WHERE date(created_at) >= ? AND status != 'RETURNED'`, [monthStart]
+        `SELECT SUM(grand_total) as revenue, COUNT(*) as cnt FROM sales WHERE date(created_at) >= ? AND status != 'RETURNED'`, [monthStart]
       );
       const [monthCogs] = await db.getAllAsync<{ total: number }>(
-        `SELECT COALESCE(SUM(si.quantity * p.cost_price), 0) as total FROM sale_items si JOIN sales s ON si.sale_id = s.id JOIN products p ON si.product_id = p.id WHERE date(s.created_at) >= ? AND s.status != 'RETURNED'`, [monthStart]
+        `SELECT SUM(si.quantity * si.cost_price) as total FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE date(s.created_at) >= ? AND s.status != 'RETURNED'`, [monthStart]
       );
       const [monthExp] = await db.getAllAsync<{ total: number }>(
-        `SELECT COALESCE(SUM(amount), 0) as total FROM expenses WHERE expense_date >= ?`, [monthStart]
+        `SELECT SUM(amount) as total FROM expenses WHERE expense_date >= ?`, [monthStart]
       );
       const [prodStats] = await db.getAllAsync<{ total: number; low: number }>(
         `SELECT COUNT(*) as total, SUM(CASE WHEN current_stock <= reorder_level THEN 1 ELSE 0 END) as low FROM products WHERE is_active = 1`
@@ -103,11 +103,11 @@ export function createReportRepo(db: SQLiteDB) {
       const from = fromDate.toISOString().split('T')[0];
 
       const rows = await db.getAllAsync<{ date: string; revenue: number; cnt: number }>(
-        `SELECT date(created_at) as date, COALESCE(SUM(grand_total), 0) as revenue, COUNT(*) as cnt FROM sales WHERE date(created_at) >= ? AND status != 'RETURNED' GROUP BY date(created_at) ORDER BY date(created_at)`, [from]
+        `SELECT date(created_at) as date, SUM(grand_total) as revenue, COUNT(*) as cnt FROM sales WHERE date(created_at) >= ? AND status != 'RETURNED' GROUP BY date(created_at) ORDER BY date(created_at)`, [from]
       );
 
       const costRows = await db.getAllAsync<{ date: string; cost: number }>(
-        `SELECT date(s.created_at) as date, COALESCE(SUM(si.quantity * p.cost_price), 0) as cost FROM sale_items si JOIN sales s ON si.sale_id = s.id JOIN products p ON si.product_id = p.id WHERE date(s.created_at) >= ? AND s.status != 'RETURNED' GROUP BY date(s.created_at)`, [from]
+        `SELECT date(s.created_at) as date, SUM(si.quantity * si.cost_price) as cost FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE date(s.created_at) >= ? AND s.status != 'RETURNED' GROUP BY date(s.created_at)`, [from]
       );
       const costMap = new Map(costRows.map(r => [r.date, r.cost]));
 
@@ -163,7 +163,7 @@ export function createReportRepo(db: SQLiteDB) {
         `SELECT COALESCE(SUM(grand_total), 0) as total FROM sales s WHERE ${conditions.join(' AND ')}`, params
       );
       const [cogs] = await db.getAllAsync<{ total: number }>(
-        `SELECT COALESCE(SUM(si.quantity * p.cost_price), 0) as total FROM sale_items si JOIN sales s ON si.sale_id = s.id JOIN products p ON si.product_id = p.id WHERE ${conditions.join(' AND ')}`, params
+        `SELECT COALESCE(SUM(si.quantity * si.cost_price), 0) as total FROM sale_items si JOIN sales s ON si.sale_id = s.id WHERE ${conditions.join(' AND ')}`, params
       );
 
       const expConditions: string[] = [];

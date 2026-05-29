@@ -3,6 +3,7 @@
  * Stat cards are clickable and open detail sheets
  */
 import { Feather } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
@@ -115,20 +116,25 @@ export default function DashboardScreen() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 12, backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <LinearGradient
+          colors={[colors.primary, colors.primary + 'DD']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={[styles.header, { paddingTop: insets.top + 12, borderBottomColor: 'transparent', paddingBottom: 20 }]}
+        >
           <View>
-            <Text style={[styles.greeting, { color: colors.textSecondary }]}>{getGreeting()},</Text>
-            <Text style={[styles.userName, { color: colors.text }]}>{user?.full_name ?? 'User'}</Text>
+            <Text style={[styles.greeting, { color: 'rgba(255,255,255,0.8)' }]}>{getGreeting()},</Text>
+            <Text style={[styles.userName, { color: '#FFF' }]}>{user?.full_name ?? 'User'}</Text>
           </View>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
             <TouchableOpacity onPress={() => { setRefreshing(true); loadData(); }} style={{ padding: 6 }}>
-              <Feather name="refresh-cw" size={18} color={colors.textSecondary} />
+              <Feather name="refresh-cw" size={18} color="#FFF" />
             </TouchableOpacity>
-            <View style={[styles.roleBadge, { backgroundColor: (roleColors[user?.role ?? ''] || colors.primary) + '22' }]}>
-              <Text style={[styles.roleText, { color: roleColors[user?.role ?? ''] || colors.primary }]}>{(user?.role ?? '').toUpperCase()}</Text>
+            <View style={[styles.roleBadge, { backgroundColor: 'rgba(255,255,255,0.25)' }]}>
+              <Text style={[styles.roleText, { color: '#FFF' }]}>{(user?.role ?? '').toUpperCase()}</Text>
             </View>
           </View>
-        </View>
+        </LinearGradient>
 
         {/* Stats */}
         <View style={styles.section}>
@@ -185,9 +191,9 @@ export default function DashboardScreen() {
           <View style={styles.actionsRow}>
             {[
               { icon: 'shopping-cart' as const, label: 'New Sale', color: colors.primary, route: '/(tabs)/pos' },
-              { icon: 'package' as const, label: 'Inventory', color: colors.warning, route: '/inventory' },
-              { icon: 'bar-chart-2' as const, label: 'Reports', color: colors.success, route: '/reports' },
-              { icon: 'users' as const, label: 'Customers', color: '#8B5CF6', route: '/(tabs)/customers' },
+              { icon: 'package' as const, label: 'Inventory', color: colors.warning, route: '/(tabs)/inventory' },
+              { icon: 'bar-chart-2' as const, label: 'Reports', color: colors.success, route: '/(tabs)/reports' },
+              { icon: 'users' as const, label: 'Customers', color: '#8B5CF6', route: '/users' },
             ].map(a => (
               <TouchableOpacity key={a.label} style={[styles.actionBtn, { backgroundColor: colors.card, borderColor: colors.border }]} onPress={() => router.push(a.route as any)} activeOpacity={0.7}>
                 <View style={[styles.actionIcon, { backgroundColor: a.color + '22' }]}>
@@ -314,7 +320,7 @@ export default function DashboardScreen() {
                       renderItem={({ item: sale }) => (
                         <TouchableOpacity style={[styles.saleRow, { backgroundColor: colors.background, borderColor: colors.border }]} onPress={() => { setDetailModal(null); router.push(`/sale/${sale.id}` as any); }}>
                           <View style={{ width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primary + '18', alignItems: 'center', justifyContent: 'center' }}>
-                            <Feather name="receipt" size={16} color={colors.primary} />
+                            <Feather name="file-text" size={16} color={colors.primary} />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.text }}>{sale.invoice_number}</Text>
@@ -375,7 +381,7 @@ const styles = StyleSheet.create({
   sectionLabel: { fontSize: 11, fontFamily: 'Inter_600SemiBold', letterSpacing: 1 },
   seeAll: { fontSize: 13, fontFamily: 'Inter_500Medium' },
   statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  statCard: { width: '48%', flexGrow: 1, padding: 14, borderRadius: 14, borderWidth: 1, gap: 5 },
+  statCard: { width: '48%', flexGrow: 1, padding: 14, borderRadius: 14, borderWidth: 1, gap: 5, elevation: 3, shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
   statIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   statValue: { fontSize: 18, fontFamily: 'Inter_700Bold', marginTop: 2 },
   statTitle: { fontSize: 12, fontFamily: 'Inter_500Medium' },

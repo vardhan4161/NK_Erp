@@ -35,29 +35,29 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Dashboard',
+          title: 'Home',
           tabBarIcon: ({ color, size }) => <Feather name="home" size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="inventory"
+        options={{
+          title: 'Inventory',
+          tabBarIcon: ({ color, size }) => <Feather name="package" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="pos"
         options={{
-          title: 'POS',
+          title: 'Billing',
           tabBarIcon: ({ color, size }) => <Feather name="shopping-cart" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="products"
+        name="reports"
         options={{
-          title: 'Products',
-          tabBarIcon: ({ color, size }) => <Feather name="box" size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="customers"
-        options={{
-          title: 'Customers',
-          tabBarIcon: ({ color, size }) => <Feather name="users" size={size} color={color} />,
+          title: 'Reports',
+          tabBarIcon: ({ color, size }) => <Feather name="bar-chart-2" size={size} color={color} />,
         }}
       />
       <Tabs.Screen

@@ -38,6 +38,7 @@ export interface SaleItem {
   quantity: number;
   unit_price: number;
   discount: number;
+  cost_price: number;
   gst_rate: number;
   gst_amount: number;
   total_price: number;
@@ -116,13 +117,16 @@ export function createSalesRepo(db: SQLiteDB) {
         // Insert sale items and update stock
         for (const item of processedItems) {
           await db.runAsync(
-            `INSERT INTO sale_items (sale_id, product_id, product_name, product_sku, quantity, unit_price, discount, gst_rate, gst_amount, total_price)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [saleId, item.productId, item.name, item.sku, item.quantity, item.unitPrice, item.discount, item.gstRate, item.gstAmount, item.totalPrice]
+            `INSERT INTO sale_items (sale_id, product_id, product_name, product_sku, quantity, cost_price, unit_price, discount, gst_rate, gst_amount, total_price)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [saleId, item.productId, item.name, item.sku, item.quantity, item.costPrice, item.unitPrice, item.discount, item.gstRate, item.gstAmount, item.totalPrice]
           );
 
-          // Update stock
+          // Update stock and enforce strict non-negative check
           const newStock = item.currentStock - item.quantity;
+          if (newStock < 0) {
+            throw new Error(`Insufficient stock for ${item.name}. Available: ${item.currentStock}, Requested: ${item.quantity}`);
+          }
           await db.runAsync('UPDATE products SET current_stock = ? WHERE id = ?', [newStock, item.productId]);
 
           // Record stock movement

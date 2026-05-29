@@ -3,14 +3,17 @@
  */
 import { Feather } from '@expo/vector-icons';
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, StyleSheet, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, StyleSheet, RefreshControl, Modal } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDatabaseStatus } from '@/contexts/DatabaseContext';
 import { formatCurrency, formatCurrencyShort } from '@/utils/formatters';
 import type { ProfitLoss, GstReport, TopProduct, CategorySales } from '@/database/repositories';
+import { ExportService } from '@/services/ExportService';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function ReportsScreen() {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
   const { repos } = useDatabaseStatus();
   const [tab, setTab] = useState<'profit' | 'gst' | 'top' | 'category'>('profit');
   const [profitLoss, setProfitLoss] = useState<ProfitLoss | null>(null);
@@ -18,6 +21,7 @@ export default function ReportsScreen() {
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [catSales, setCatSales] = useState<CategorySales[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [showExportOptions, setShowExportOptions] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!repos) return;
@@ -32,6 +36,57 @@ export default function ReportsScreen() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    setShowExportOptions(false);
+    try {
+      if (tab === 'profit' && profitLoss) {
+        const data = [{ 
+          Revenue: profitLoss.revenue, 
+          'Cost of Goods': profitLoss.costOfGoods, 
+          'Gross Profit': profitLoss.grossProfit, 
+          'Gross Margin %': profitLoss.grossMargin,
+          Expenses: profitLoss.totalExpenses,
+          'Net Profit': profitLoss.netProfit,
+          'Net Margin %': profitLoss.netMargin 
+        }];
+        if (format === 'excel') await ExportService.exportToExcel(data, 'Profit_Loss_Report');
+        else await ExportService.exportToPdf(ExportService.generateGenericHtmlReport('Profit & Loss Report', data), 'Profit_Loss_Report');
+      } else if (tab === 'gst' && gst) {
+        const data = [{ 
+          'Total Sales': gst.totalSales, 
+          Transactions: gst.transactionCount, 
+          CGST: gst.totalCgst, 
+          SGST: gst.totalSgst, 
+          IGST: gst.totalIgst, 
+          'Total Tax': gst.totalTax 
+        }];
+        if (format === 'excel') await ExportService.exportToExcel(data, 'GST_Report');
+        else await ExportService.exportToPdf(ExportService.generateGenericHtmlReport('GST Report', data), 'GST_Report');
+      } else if (tab === 'top' && topProducts.length > 0) {
+        const data = topProducts.map(p => ({
+          Product: p.product_name,
+          SKU: p.sku,
+          Category: p.category_name,
+          'Quantity Sold': p.quantity_sold,
+          Revenue: p.revenue
+        }));
+        if (format === 'excel') await ExportService.exportToExcel(data, 'Top_Products_Report');
+        else await ExportService.exportToPdf(ExportService.generateGenericHtmlReport('Top Products Report', data), 'Top_Products_Report');
+      } else if (tab === 'category' && catSales.length > 0) {
+        const data = catSales.map(c => ({
+          Category: c.category_name,
+          'Quantity Sold': c.quantity_sold,
+          Revenue: c.revenue,
+          'Percentage %': c.percentage
+        }));
+        if (format === 'excel') await ExportService.exportToExcel(data, 'Category_Sales_Report');
+        else await ExportService.exportToPdf(ExportService.generateGenericHtmlReport('Category Sales Report', data), 'Category_Sales_Report');
+      }
+    } catch (e: any) {
+      alert(e.message);
+    }
+  };
+
   const tabs = [
     { key: 'profit' as const, label: 'Profit & Loss', icon: 'trending-up' as const },
     { key: 'gst' as const, label: 'GST', icon: 'file-text' as const },
@@ -40,7 +95,15 @@ export default function ReportsScreen() {
   ];
 
   return (
-    <ScrollView style={[styles.root, { backgroundColor: colors.background }]} contentContainerStyle={{ paddingBottom: 100 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={colors.primary} />}>
+    <View style={[styles.root, { backgroundColor: colors.background }]}>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: insets.top + 8, paddingHorizontal: 16, paddingBottom: 8, backgroundColor: colors.card, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+        <Text style={{ fontSize: 20, fontFamily: 'Inter_700Bold', color: colors.text }}>Reports</Text>
+        <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.inputBg, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, borderWidth: 1, borderColor: colors.border }} onPress={() => setShowExportOptions(true)}>
+          <Feather name="download" size={14} color={colors.text} />
+          <Text style={{ fontSize: 13, fontFamily: 'Inter_600SemiBold', color: colors.text }}>Export</Text>
+        </TouchableOpacity>
+      </View>
+      <ScrollView contentContainerStyle={{ paddingBottom: 100 }} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => { setRefreshing(true); loadData(); }} tintColor={colors.primary} />}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ paddingVertical: 12, paddingHorizontal: 16 }}>
         <View style={{ flexDirection: 'row', gap: 8 }}>
           {tabs.map(t => (
@@ -125,7 +188,33 @@ export default function ReportsScreen() {
           </View>
         )}
       </View>
-    </ScrollView>
+      </ScrollView>
+      
+      {/* Export Options Modal */}
+      <Modal visible={showExportOptions} transparent animationType="fade" onRequestClose={() => setShowExportOptions(false)}>
+        <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }}>
+          <View style={{ backgroundColor: colors.card, borderRadius: 16, padding: 20, borderWidth: 1, borderColor: colors.border }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 18, fontFamily: 'Inter_700Bold', color: colors.text }}>Export Report</Text>
+              <TouchableOpacity onPress={() => setShowExportOptions(false)}><Feather name="x" size={20} color={colors.text} /></TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 14, fontFamily: 'Inter_400Regular', color: colors.textSecondary, marginBottom: 20 }}>
+              Choose format to export the current {tab} report:
+            </Text>
+            <View style={{ gap: 12 }}>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: colors.success + '22', borderRadius: 12, borderWidth: 1, borderColor: colors.success }} onPress={() => handleExport('excel')}>
+                <Feather name="file" size={20} color={colors.success} />
+                <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.success }}>Export as Excel (.xlsx)</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: colors.error + '22', borderRadius: 12, borderWidth: 1, borderColor: colors.error }} onPress={() => handleExport('pdf')}>
+                <Feather name="file-text" size={20} color={colors.error} />
+                <Text style={{ fontSize: 16, fontFamily: 'Inter_600SemiBold', color: colors.error }}>Export as PDF</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
