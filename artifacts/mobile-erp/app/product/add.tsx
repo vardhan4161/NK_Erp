@@ -177,7 +177,6 @@ export default function AddProductScreen() {
           setImageUri('');
           setModel('');
           setVariant('');
-          setVariant('');
           setCategoryId(0);
           setBrandId(0);
           setShowNewBrandInput(false);

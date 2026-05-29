@@ -135,7 +135,15 @@ function createWebDatabase(): DatabaseInstance {
             let paramIdx = 0;
             for (const part of setParts) {
               const [col] = part.trim().split('=').map(s => s.trim());
-              if (col && !col.includes('datetime')) {
+              if (!col) continue;
+              // Skip datetime('now') — it's not a ? param
+              if (col.includes('datetime') || col.includes('date(') || col.includes("'now'")) {
+                // Set updated_at to current time
+                if (col === 'updated_at') row['updated_at'] = new Date().toISOString();
+                continue;
+              }
+              // Only consume a param if we haven't exhausted them (leave last for WHERE id)
+              if (paramIdx < params.length - 1) {
                 row[col] = params[paramIdx];
                 paramIdx++;
               }
@@ -239,16 +247,19 @@ function createWebDatabase(): DatabaseInstance {
               let colExpr = parts[0].trim();
               let valExpr = parts[1].trim();
 
-              // Extract column name: remove table prefixes like s. or p., remove functions like date()
+              // Check if this is a date() expression wrapping a column
+              const isDateExpr = colExpr.toLowerCase().includes('date(');
+
+              // Extract column name: remove table prefixes like s. or p., remove functions like date() and COALESCE()
               let col = colExpr.toLowerCase();
-              col = col.replace(/^(date\()?([a-z0-9_]+\.)?([a-z0-9_]+)(\))?$/, '$3');
+              col = col.replace(/^coalesce\(/, '').replace(/^(date\()?([a-z0-9_]+\.)?([a-z0-9_]+)(\))?.*$/, '$3');
 
               // Determine value
               let val: any;
-              if (valExpr === '?') {
+              if (valExpr.trim() === '?') {
                 val = params[paramIdx];
                 paramIdx++;
-              } else if (valExpr.toLowerCase().includes("date('now')") || valExpr.toLowerCase().includes('date("now")') || valExpr.toLowerCase() === "date('now')") {
+              } else if (valExpr.toLowerCase().includes("date('now')") || valExpr.toLowerCase().includes('date("now")') || valExpr.toLowerCase().trim() === "date('now')") {
                 val = new Date().toISOString().split('T')[0];
               } else {
                 // Static value: strip quotes
@@ -264,24 +275,41 @@ function createWebDatabase(): DatabaseInstance {
                   let dbVal = r[col] !== undefined ? r[col] : r[colExpr];
                   if (dbVal === undefined) return true; // Keep if column not in row
 
-                  // If it's a date check, e.g. date(created_at) = '2026-05-28'
-                  if (colExpr.toLowerCase().includes('date(') && typeof dbVal === 'string') {
+                  // If it's a date() expression, always slice ISO timestamp to date portion
+                  if (isDateExpr && typeof dbVal === 'string') {
                     dbVal = dbVal.split('T')[0].split(' ')[0];
+                  }
+
+                  // For date string comparisons (YYYY-MM-DD format)
+                  const isDateValue = typeof val === 'string' && /^\d{4}-\d{2}-\d{2}/.test(val);
+                  if (isDateExpr && isDateValue) {
+                    // Pure string comparison works correctly for ISO date strings
+                    const strDbDate = String(dbVal);
+                    const strValDate = String(val);
+                    if (op === '=') return strDbDate === strValDate;
+                    if (op === '!=') return strDbDate !== strValDate;
+                    if (op === '>=') return strDbDate >= strValDate;
+                    if (op === '<=') return strDbDate <= strValDate;
                   }
 
                   const strDbVal = String(dbVal).toLowerCase();
                   const strVal = String(val).toLowerCase();
 
                   if (op === '=') {
-                    return strDbVal == strVal;
+                    // Numeric equality check
+                    if (typeof dbVal === 'number' && typeof val === 'number') return dbVal === val;
+                    return strDbVal === strVal;
                   } else if (op === '!=') {
-                    return strDbVal != strVal;
+                    if (typeof dbVal === 'number' && typeof val === 'number') return dbVal !== val;
+                    return strDbVal !== strVal;
                   } else if (op === 'LIKE') {
                     const term = strVal.replace(/%/g, '');
                     return strDbVal.includes(term);
                   } else if (op === '>=') {
+                    if (typeof dbVal === 'number' && typeof val === 'number') return dbVal >= val;
                     return strDbVal >= strVal;
                   } else if (op === '<=') {
+                    if (typeof dbVal === 'number' && typeof val === 'number') return dbVal <= val;
                     return strDbVal <= strVal;
                   }
                   return true;

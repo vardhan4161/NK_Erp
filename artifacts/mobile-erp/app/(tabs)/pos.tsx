@@ -57,6 +57,7 @@ export default function POSScreen() {
     if (!repos) return;
     if (selectedCategoryId !== null) {
       const filters: any = { categoryId: selectedCategoryId, isActive: true };
+      // Only filter by brand if a specific brand is selected (non-null, non-zero)
       if (selectedBrandId !== null && selectedBrandId !== 0) {
         filters.brandId = selectedBrandId;
       }
@@ -108,9 +109,11 @@ export default function POSScreen() {
   );
 
   const renderBrandsGrid = () => {
-    // Only show brands that have products in this category
+    // Show brands that have products in this category, fall back to ALL brands if none found
     const activeBrandIds = new Set(browseProducts.map(p => p.brand_id).filter(Boolean));
-    const filteredBrands = brands.filter(b => activeBrandIds.has(b.id));
+    const filteredBrands = activeBrandIds.size > 0
+      ? brands.filter(b => activeBrandIds.has(b.id))
+      : brands; // fallback: show all brands so user can still browse
 
     return (
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 120, gap: 16 }}>
