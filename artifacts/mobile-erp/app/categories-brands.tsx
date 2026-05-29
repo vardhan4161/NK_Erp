@@ -2,6 +2,7 @@
  * Categories & Brands Management Screen
  */
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert, ScrollView } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -9,6 +10,8 @@ import { useDatabaseStatus } from '@/contexts/DatabaseContext';
 import type { Category, Brand } from '@/database/repositories';
 
 export default function CategoriesBrandsScreen() {
+
+  const router = useRouter();
   const { colors } = useTheme();
   const { repos } = useDatabaseStatus();
   const [tab, setTab] = useState<'categories' | 'brands'>('categories');

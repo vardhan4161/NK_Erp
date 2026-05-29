@@ -226,25 +226,17 @@ export default function AddProductScreen() {
         image_uri: finalImageUri || undefined,
       });
       setIsScraping(false);
-      Alert.alert('Success ✅', 'Product added successfully', [
-        { text: 'View', onPress: () => router.replace(`/product/${id}` as any) },
-        { text: 'Add Another', onPress: () => { 
-          setName(''); 
-          setBarcode(''); 
-          setCostPrice(''); 
-          setSellingPrice(''); 
-          setGstRate(''); 
-          setStock('0'); 
-          setDescription(''); 
-          setImageUri('');
-          setModel('');
-          setVariant('');
-          setCategoryId(0);
-          setBrandId(0);
-          setShowNewBrandInput(false);
-          setNewBrandName('');
-        } },
-      ]);
+      if (typeof window !== 'undefined' && window.alert) {
+        window.alert('Product added successfully');
+        router.replace(`/product/${id}` as any);
+      } else {
+        Alert.alert('Success ✅', 'Product added successfully', [
+          { text: 'View', onPress: () => router.replace(`/product/${id}` as any) },
+          { text: 'Add Another', onPress: () => { 
+            setName(''); setBarcode(''); setCostPrice(''); setSellingPrice(''); setGstRate(''); setStock('0'); setDescription(''); setImageUri(''); setModel(''); setVariant(''); setCategoryId(0); setBrandId(0); setShowNewBrandInput(false); setNewBrandName('');
+          } },
+        ]);
+      }
     } catch (e: any) {
       setIsScraping(false);
       Alert.alert('Error', e.message);

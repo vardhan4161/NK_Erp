@@ -2,6 +2,7 @@
  * Settings Screen — Shop details, theme, data management
  */
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert } from 'react-native';
 import { useTheme, type ThemeMode, THEMES } from '@/contexts/ThemeContext';
@@ -15,6 +16,8 @@ const THEME_OPTIONS: { key: ThemeMode; label: string; preview: string }[] = [
 ];
 
 export default function SettingsScreen() {
+
+  const router = useRouter();
   const { colors, theme, setTheme } = useTheme();
   const { repos } = useDatabaseStatus();
   const [shopName, setShopName] = useState('');
@@ -39,7 +42,12 @@ export default function SettingsScreen() {
       shop_name: shopName, shop_address: shopAddress, shop_gstin: shopGstin,
       shop_phone1: phone1, shop_phone2: phone2, shop_email: email, invoice_prefix: invoicePrefix,
     });
-    Alert.alert('Saved ✅', 'Settings updated successfully');
+    if (typeof window !== 'undefined' && window.alert) {
+      window.alert('Settings updated successfully');
+      if (router.canGoBack()) router.back(); else router.replace('/');
+    } else {
+      Alert.alert('Saved ✅', 'Settings updated successfully', [{ text: 'OK', onPress: () => { if (router.canGoBack()) router.back(); else router.replace('/'); } }]);
+    }
   };
 
   const handleThemeChange = async (t: ThemeMode) => {

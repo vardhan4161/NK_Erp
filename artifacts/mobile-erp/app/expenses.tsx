@@ -2,6 +2,7 @@
  * Expenses Screen — Track business expenses
  */
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, ScrollView, StyleSheet, Alert, RefreshControl } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -13,6 +14,8 @@ import type { Expense } from '@/database/repositories';
 const EXPENSE_CATEGORIES = ['Rent', 'Electricity', 'Salary', 'Transport', 'Marketing', 'Maintenance', 'Internet', 'Insurance', 'Tax', 'Other'];
 
 export default function ExpensesScreen() {
+
+  const router = useRouter();
   const { colors } = useTheme();
   const { repos } = useDatabaseStatus();
   const { user } = useAuth();

@@ -2,6 +2,7 @@
  * Suppliers Screen — Vendor management
  */
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -9,6 +10,8 @@ import { useDatabaseStatus } from '@/contexts/DatabaseContext';
 import type { Supplier } from '@/database/repositories';
 
 export default function SuppliersScreen() {
+
+  const router = useRouter();
   const { colors } = useTheme();
   const { repos } = useDatabaseStatus();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);

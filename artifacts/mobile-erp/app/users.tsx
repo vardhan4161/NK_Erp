@@ -2,6 +2,7 @@
  * User Management Screen — View, add, manage staff accounts
  */
 import { Feather } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import React, { useState, useEffect, useCallback } from 'react';
 import { View, Text, TextInput, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -11,6 +12,8 @@ import type { User } from '@/database/repositories';
 const ROLES = ['admin', 'manager', 'salesperson', 'accountant'];
 
 export default function UsersScreen() {
+
+  const router = useRouter();
   const { colors } = useTheme();
   const { repos } = useDatabaseStatus();
   const [users, setUsers] = useState<User[]>([]);

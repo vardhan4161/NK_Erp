@@ -34,198 +34,212 @@ export default function SaleDetailScreen() {
 
   const generateInvoiceHtml = () => {
     if (!sale) return '';
+    
+    const fDate = (dString: any) => {
+      const d = new Date(dString);
+      const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      return d.getDate() + ' ' + months[d.getMonth()] + ' ' + d.getFullYear();
+    };
+    
+    const fCur = (val: any) => 'Rs. ' + Number(val).toFixed(2);
+    const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
+    const dueBalance = Math.max(0, sale.grand_total - sale.amount_paid);
+
     return `
     <html>
     <head>
       <meta charset="utf-8">
       <style>
-        body { font-family: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif; margin: 10px; color: #111; font-size: 11px; line-height: 1.4; }
-        .invoice-box { max-width: 800px; margin: auto; padding: 15px; border: 1.5px solid #111; background: #fff; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap');
+        body { font-family: 'Inter', Helvetica, Arial, sans-serif; margin: 0; padding: 0; color: #000; font-size: 10px; }
+        .invoice-box { max-width: 800px; margin: auto; border: 1px solid #000; background: #fff; display: flex; flex-direction: column; min-height: 98vh; box-sizing: border-box; }
         
-        .main-header { display: table; width: 100%; border-bottom: 2.5px solid #111; padding-bottom: 12px; margin-bottom: 15px; }
-        .logo-section { display: table-cell; width: 55%; vertical-align: middle; }
-        .logo-box { background: #111; color: white; padding: 8px 16px; border-radius: 4px; display: inline-block; font-weight: 900; font-size: 26px; letter-spacing: 1.5px; }
-        .logo-sub { font-size: 11px; letter-spacing: 0.5px; font-weight: bold; margin-top: 4px; color: #333; }
+        .header-title { padding: 12px 16px; font-size: 16px; font-weight: 400; letter-spacing: 0.5px; border-bottom: 1px solid #000; text-transform: uppercase; }
         
-        .shop-section { display: table-cell; width: 45%; text-align: right; vertical-align: middle; font-size: 10px; }
-        .shop-title { font-size: 13px; font-weight: bold; margin: 0 0 4px 0; color: #111; text-transform: uppercase; }
-        .shop-info { margin: 2px 0; color: #333; }
+        .company-info { text-align: center; padding: 15px 0; border-bottom: 1px solid #000; }
+        .company-name { color: #32E896; font-size: 22px; font-weight: 800; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .company-address { font-size: 10px; margin-bottom: 10px; }
+        .company-meta { display: flex; justify-content: center; gap: 30px; font-size: 9px; font-weight: 600; }
         
-        .meta-container { display: table; width: 100%; margin-bottom: 15px; }
-        .meta-cell { display: table-cell; border: 1.5px solid #111; padding: 10px; vertical-align: top; width: 50%; }
-        .meta-title { font-weight: 800; border-bottom: 1.5px solid #111; padding-bottom: 4px; margin-bottom: 8px; font-size: 11px; text-transform: uppercase; }
+        .bill-info-row { display: flex; border-bottom: 1px solid #000; min-height: 120px; }
+        .bill-left { width: 50%; border-right: 1px solid #000; padding: 12px 16px; box-sizing: border-box; }
+        .bill-right { width: 50%; display: flex; justify-content: space-around; align-items: center; text-align: center; }
         
-        .items-table { width: 100%; border-collapse: collapse; margin-bottom: 15px; }
-        .items-table th { background: #f1f5f9; color: #111; padding: 8px 4px; font-size: 10px; font-weight: 800; text-align: center; border: 1.5px solid #111; border-bottom: 2.5px solid #111; text-transform: uppercase; }
-        .items-table td { padding: 6px 4px; border: 1.5px solid #111; font-size: 10px; text-align: center; font-family: 'Courier New', Courier, monospace; }
-        .product-name-cell { text-align: left !important; font-family: 'Inter', sans-serif !important; font-size: 11px !important; }
+        .bill-to-title { font-size: 11px; margin-bottom: 6px; }
+        .customer-name { font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+        .customer-line { margin-bottom: 3px; font-size: 9px; }
         
-        .peach-block { background: #fff1f1; border: 1.5px solid #111; padding: 12px; margin-top: 15px; border-radius: 4px; }
-        .words-container { border: 1px solid #111; padding: 8px; background: #fff; margin-bottom: 10px; font-size: 11px; font-family: 'Inter', sans-serif; }
+        .inv-meta-block { display: flex; flex-direction: column; gap: 6px; }
+        .inv-meta-label { font-weight: 700; font-size: 10px; }
+        .inv-meta-val { font-size: 10px; }
         
-        .sig-row { display: table; width: 100%; margin-top: 35px; text-align: center; }
-        .sig-col { display: table-cell; width: 33.3%; vertical-align: bottom; }
-        .sig-line { width: 85%; border-top: 1.2px solid #111; margin: 0 auto 5px auto; }
-        .sig-label { font-size: 10px; font-weight: bold; text-transform: uppercase; color: #111; font-family: 'Inter', sans-serif; }
-        .sig-desc { font-size: 8.5px; color: #555; margin-top: 2px; font-family: 'Inter', sans-serif; }
+        table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        th { background: #32E896; color: #000; font-weight: 600; text-align: left; padding: 8px 12px; font-size: 10px; }
+        td { padding: 8px 12px; vertical-align: top; font-size: 10px; }
+        th:first-child, td:first-child { width: 8%; text-align: center; }
+        th:nth-child(2), td:nth-child(2) { width: 32%; }
+        th:nth-child(3), td:nth-child(3) { width: 12%; }
+        th:nth-child(4), td:nth-child(4) { width: 16%; }
+        th:nth-child(5), td:nth-child(5) { width: 16%; }
+        th:last-child, td:last-child { width: 16%; text-align: right; }
         
-        .footer-banner { margin-top: 20px; text-align: center; font-size: 8.5px; color: #666; line-height: 1.4; border-top: 1px solid #ccc; padding-top: 12px; font-family: 'Inter', sans-serif; }
+        .items-container { flex-grow: 1; border-bottom: 1px solid #000; display: flex; flex-direction: column; }
+        .items-table-wrapper { flex-grow: 1; }
+        
+        /* Inner vertical lines for table */
+        th:not(:last-child), td:not(:last-child) { border-right: 1px solid #ccc; }
+        th { border-bottom: 1px solid #000; border-right: 1px solid #000 !important; }
+        th:last-child { border-right: none !important; }
+        .items-table-wrapper td { border-right: 1px solid #000; }
+        .items-table-wrapper td:last-child { border-right: none; }
+        
+        .totals-table { border-collapse: collapse; width: 100%; }
+        .totals-table td { border-right: 1px solid #000; padding: 8px 12px; font-size: 10px; }
+        .totals-table td:last-child { border-right: none; text-align: right; font-weight: 600; }
+        
+        .row-border-top td { border-top: 1px solid #000; }
+        
+        .bg-green { background: #32E896; font-weight: 700; }
+        .bg-green td { font-weight: 700; color: #000; }
+        
+        .footer-row { display: flex; min-height: 100px; }
+        .footer-notes { width: 35%; border-right: 1px solid #000; padding: 12px; }
+        .footer-terms { width: 35%; border-right: 1px solid #000; padding: 12px; }
+        .footer-sign { width: 30%; padding: 12px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; text-align: center; }
+        
+        .footer-title { font-weight: 700; margin-bottom: 6px; font-size: 10px; }
+        .footer-text { font-size: 9px; line-height: 1.4; color: #333; }
       </style>
     </head>
     <body>
       <div class="invoice-box">
-        <div class="main-header">
-          <div class="logo-section">
-            <div class="logo-box">${shopDetails.shop_name || 'NK Enterprises'}</div>
-            <div class="logo-sub">ELECTRONICS & APPLIANCES BILL (ORIGINAL)</div>
-          </div>
-          <div class="shop-section">
-            <div class="shop-title">Store / Office Details</div>
-            <div class="shop-info">${shopDetails.shop_address || 'Plot No. 40, Sagar Road, Hyderabad - 500 079.'}</div>
-            <div class="shop-info">Phone: ${shopDetails.shop_phone1 || '9121011065'} ${shopDetails.shop_phone2 ? ', ' + shopDetails.shop_phone2 : ''}</div>
-            ${shopDetails.shop_gstin ? `<div class="shop-info"><strong>GSTIN:</strong> ${shopDetails.shop_gstin}</div>` : `<div class="shop-info"><strong>GSTIN:</strong> 36AAFCE1683D1ZT</div>`}
-          </div>
-        </div>
-
-        <div class="meta-container">
-          <div class="meta-cell">
-            <div class="meta-title">To</div>
-            <strong>${sale.customer_name || 'Walk-in Customer'}</strong><br>
-            ${sale.customer_phone ? `Phone: ${sale.customer_phone}<br>` : ''}
-            ${sale.customer_gstin ? `GSTIN: ${sale.customer_gstin}<br>` : ''}
-            Address: H NO 7-8-7 , DULLAPALLI, Telangana - 500079
-          </div>
-          <div class="meta-cell">
-            <div class="meta-title">Invoice Details</div>
-            <strong>Invoice No:</strong> ${sale.invoice_number}<br>
-            <strong>Date:</strong> ${formatDateTime(sale.created_at)}<br>
-            <strong>Payment Method:</strong> ${sale.payment_method}<br>
-            <strong>Status:</strong> ${sale.status}
+        <div class="header-title">TAX INVOICE</div>
+        
+        <div class="company-info">
+          <div class="company-name">${shopDetails.shop_name || 'Akash Enterprises'}</div>
+          <div class="company-address">${shopDetails.shop_address || 'Ajmer Road, Jaipur, Rajasthan 301202'}</div>
+          <div class="company-meta">
+            <span>Phone: +91 ${shopDetails.shop_phone1 || '9981278197'}</span>
+            <span>GSTIN: ${shopDetails.shop_gstin || '08AALCR2857A1ZD'}</span>
+            <span>PAN Number: ${'AVHPC9999A'}</span>
           </div>
         </div>
-
-        <table class="items-table">
-          <thead>
-            <tr>
-              <th style="width: 5%">S.No</th>
-              <th style="width: 40%">PRODUCT NAME</th>
-              <th style="width: 10%">HSN/SAC</th>
-              <th style="width: 8%">QTY</th>
-              <th style="width: 10%">RATE</th>
-              <th style="width: 8%">CGST</th>
-              <th style="width: 8%">SGST</th>
-              <th style="width: 8%">IGST</th>
-              <th style="width: 13%">TOTAL</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${items.map((item, i) => {
-              const hsn = item.product_sku ? item.product_sku.substring(0, 8) : '84796000';
-              const discountValue = item.discount / item.quantity;
-              const rateVal = (item.unit_price - discountValue);
-              
-              const isInter = sale.is_inter_state === 1;
-              const cgstRate = isInter ? 0 : item.gst_rate / 2;
-              const cgstVal = isInter ? 0 : item.gst_amount / 2;
-              const sgstRate = isInter ? 0 : item.gst_rate / 2;
-              const sgstVal = isInter ? 0 : item.gst_amount / 2;
-              const igstRate = isInter ? item.gst_rate : 0;
-              const igstVal = isInter ? item.gst_amount : 0;
-              
-              return `
+        
+        <div class="bill-info-row">
+          <div class="bill-left">
+            <div class="bill-to-title">BILL TO</div>
+            <div class="customer-name">${sale.customer_name || 'Walk-in Customer'}</div>
+            <div class="customer-line">${'04, KK Buildings, Ajmeri Gate, Jodhpur, Rajasthan, 304582'}</div>
+            ${sale.customer_phone ? `<div class="customer-line">Phone: +91 ${sale.customer_phone}</div>` : ''}
+            <div class="customer-line">PAN Number: ${'BBHPC9999A'}</div>
+            ${sale.customer_gstin ? `<div class="customer-line">GSTIN: ${sale.customer_gstin}</div>` : ''}
+            <div class="customer-line">Place of Supply: ${'Rajasthan'}</div>
+          </div>
+          <div class="bill-right">
+            <div class="inv-meta-block">
+              <div class="inv-meta-label">Invoice No</div>
+              <div class="inv-meta-val">${sale.invoice_number}</div>
+            </div>
+            <div class="inv-meta-block">
+              <div class="inv-meta-label">Invoice Date</div>
+              <div class="inv-meta-val">${fDate(sale.created_at)}</div>
+            </div>
+          </div>
+        </div>
+        
+        <div class="items-container">
+          <div class="items-table-wrapper">
+            <table>
+              <thead>
                 <tr>
-                  <td>${i + 1}</td>
-                  <td class="product-name-cell">
-                    <strong>${(item.product_name || 'UNKNOWN PRODUCT').toUpperCase()}</strong>
-                    <div style="font-size: 8.5px; color: #555; margin-top: 3px; font-weight: normal; font-family: 'Inter', sans-serif;">
-                      SKU: ${item.product_sku || '84796000'} | Variant: Standard
-                    </div>
-                  </td>
-                  <td>${hsn}</td>
-                  <td>
-                    <div style="font-weight: bold; font-size: 11px;">${item.quantity}</div>
-                    <div style="font-size: 8px; color: #555; font-family: 'Inter', sans-serif;">Value</div>
-                  </td>
-                  <td>
-                    <div style="font-weight: bold; font-size: 11px;">${rateVal.toFixed(2)}</div>
-                    <div style="font-size: 8px; color: #555; font-family: 'Inter', sans-serif;">Value</div>
-                  </td>
-                  <td>
-                    <div>${cgstRate}%</div>
-                    <div style="font-size: 8.5px; color: #333; margin-top: 2px;">${cgstVal > 0 ? cgstVal.toFixed(2) : '-'}</div>
-                  </td>
-                  <td>
-                    <div>${sgstRate}%</div>
-                    <div style="font-size: 8.5px; color: #333; margin-top: 2px;">${sgstVal > 0 ? sgstVal.toFixed(2) : '-'}</div>
-                  </td>
-                  <td>
-                    <div>${igstRate > 0 ? igstRate + '%' : '-'}</div>
-                    <div style="font-size: 8.5px; color: #333; margin-top: 2px;">${igstVal > 0 ? igstVal.toFixed(2) : '-'}</div>
-                  </td>
-                  <td style="font-weight: bold; font-size: 11px; text-align: right;">
-                    ${item.total_price.toFixed(2)}
-                  </td>
+                  <th>Sr. No.</th>
+                  <th>Items</th>
+                  <th>Quantity</th>
+                  <th>Price / Unit</th>
+                  <th>Tax / Unit</th>
+                  <th>Amount</th>
                 </tr>
-              `;
-            }).join('')}
-            
-            <!-- Table Totals Row -->
-            <tr style="font-weight: bold; background: #fafafa;">
-              <td colspan="3" style="text-align: right; font-family: 'Inter', sans-serif; font-size: 10px; border-top: 1.5px solid #111;">Total</td>
-              <td style="border-top: 1.5px solid #111;">
-                <div style="font-size: 11px;">${items.reduce((sum, item) => sum + item.quantity, 0)}</div>
-                <div style="font-size: 8px; font-weight: normal; color: #555; font-family: 'Inter', sans-serif;">Value</div>
-              </td>
-              <td style="border-top: 1.5px solid #111;"></td>
-              <td style="border-top: 1.5px solid #111; font-size: 11px;">${sale.cgst > 0 ? '₹' + sale.cgst.toFixed(2) : '-'}</td>
-              <td style="border-top: 1.5px solid #111; font-size: 11px;">${sale.sgst > 0 ? '₹' + sale.sgst.toFixed(2) : '-'}</td>
-              <td style="border-top: 1.5px solid #111; font-size: 11px;">${sale.igst > 0 ? '₹' + sale.igst.toFixed(2) : '-'}</td>
-              <td style="text-align: right; border-top: 1.5px solid #111; font-size: 11px;">
-                ₹${sale.grand_total.toFixed(2)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-
-        <div class="peach-block">
-          <div class="words-container">
-            <strong>Rupees in words:</strong> <span style="text-transform: capitalize;">${numberToWords(sale.grand_total)} Only.</span>
+              </thead>
+              <tbody>
+                ${items.map((item, i) => {
+                  const itemGst = item.gst_amount / (item.quantity || 1);
+                  return `
+                  <tr>
+                    <td style="text-align:center;">${i + 1}</td>
+                    <td>${item.product_name}</td>
+                    <td>${item.quantity} NOS</td>
+                    <td>${fCur(item.unit_price)}</td>
+                    <td>${fCur(itemGst)} (${item.gst_rate}%)</td>
+                    <td style="text-align:right;">${fCur(item.total_price)}</td>
+                  </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
           </div>
           
-          <div style="margin-bottom: 4px; font-size: 10px; font-family: 'Inter', sans-serif;">
-            <strong>Remarks:</strong> ${sale.notes || 'None'}
+          <table class="totals-table">
+            <tbody>
+              ${sale.discount_amount > 0 ? `
+              <tr class="row-border-top">
+                <td style="width: 8%;"></td>
+                <td style="width: 32%; text-align: right;">Discount</td>
+                <td style="width: 12%;"></td>
+                <td style="width: 16%;"></td>
+                <td style="width: 16%;"></td>
+                <td style="width: 16%;">${fCur(sale.discount_amount)}</td>
+              </tr>
+              ` : ''}
+              
+              <tr class="row-border-top bg-green">
+                <td style="width: 8%;"></td>
+                <td style="width: 32%; text-align: right;">Total</td>
+                <td style="width: 12%;">${totalQty}</td>
+                <td style="width: 16%;"></td>
+                <td style="width: 16%;">${fCur(sale.total_tax)}</td>
+                <td style="width: 16%;">${fCur(sale.grand_total)}</td>
+              </tr>
+              
+              <tr class="row-border-top">
+                <td style="width: 8%;"></td>
+                <td style="width: 32%; text-align: right;">Received Amount</td>
+                <td style="width: 12%;"></td>
+                <td style="width: 16%;"></td>
+                <td style="width: 16%;"></td>
+                <td style="width: 16%;">${fCur(sale.amount_paid || sale.grand_total)}</td>
+              </tr>
+              
+              <tr class="row-border-top">
+                <td style="width: 8%;"></td>
+                <td style="width: 32%; text-align: right; font-weight: 700;">Due Balance</td>
+                <td style="width: 12%;"></td>
+                <td style="width: 16%;"></td>
+                <td style="width: 16%;"></td>
+                <td style="width: 16%;">${fCur(dueBalance)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="footer-row">
+          <div class="footer-notes">
+            <div class="footer-title">Notes</div>
+            <div class="footer-text">${sale.notes || '1. No return deal'}</div>
           </div>
-          <div style="margin-bottom: 8px; font-size: 10px; font-family: 'Inter', sans-serif;">
-            <strong>HP To:</strong> Wallet-${sale.grand_total.toFixed(0)}
+          <div class="footer-terms">
+            <div class="footer-title">Terms & Conditions</div>
+            <div class="footer-text">
+              1. Customer will pay the GST<br>
+              2. Customer will pay the Delivery charges<br>
+              3. Pay due amount within 15 days
+            </div>
           </div>
-          
-          <div style="border-top: 1.2px dashed #111; padding-top: 6px; font-size: 9px; line-height: 1.35; font-style: italic; font-family: 'Inter', sans-serif;">
-            <strong>Note:</strong> Goods once sold will not be taken back or exchanged under any circumstances. The article(s) sold is/are guaranteed by respective manufacturers only.
+          <div class="footer-sign">
+            <div style="font-size: 9px; margin-bottom: 2px;">Authorised Signatory For</div>
+            <div style="font-size: 10px; font-weight: 600;">${shopDetails.shop_name || 'Akash Enterprises'}</div>
           </div>
         </div>
-
-        <div class="sig-row">
-          <div class="sig-col">
-            <div class="sig-line"></div>
-            <div class="sig-label">Receiver's Signature</div>
-            <div class="sig-desc">Received items in good condition</div>
-          </div>
-          <div class="sig-col">
-            <div class="sig-line"></div>
-            <div class="sig-label">Customer Signature</div>
-            <div class="sig-desc">Confirmed and Accepted</div>
-          </div>
-          <div class="sig-col">
-            <div class="sig-line"></div>
-            <div class="sig-label">Authorised Signatory</div>
-            <div class="sig-desc">For ${shopDetails.shop_name || 'NK Enterprises'}</div>
-          </div>
-        </div>
-
-        <div class="footer-banner">
-          Thank you for choosing ${shopDetails.shop_name || 'NK Enterprises'} for your electronics and appliances purchases.<br>
-          For support or service requests, please contact us with this invoice number.
-        </div>
+        
       </div>
     </body>
     </html>
